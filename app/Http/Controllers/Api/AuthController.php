@@ -3,77 +3,68 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        //
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
-    }
 
     public function login(Request $request)
     {
         $loginData = $request->validate([
-            'email' => 'required|email',
+            'email' => 'email|required',
             'password' => 'required'
         ]);
 
-        $user = \App\Models\User::where('email', $request->email)->first();
+        $user = User::where('email', $loginData['email'])->first();
 
-        if (!$user) {
-            return response([
-            'message' => ['Email not found'],
+        if(!$user){
+            return response()->json([
+                'message' => 'User not found'
+            ], 401);
+        }
+
+        if(!Hash::check($loginData['password'], $user->password)){
+            return response()->json([
+                'message' => 'Password incorrect'
             ], 404);
         }
+        $token = $user->createToken('auth_token')->plainTextToken;
+        return response()->json([
+            'access_token' => $token,
+            'user' => UserResource::make($user)
+        ]);
+    }
 
-        if(!Hash::check($request->password, $user->password)) {
-            return response([
-                'message'=> ['password is incorrect'],
-                ], 404);
-        }
+    public function register(Request $request)
+    {
+        $validatedData = $request->validate([
+            'name'  => 'required|max:55',
+            'email' => 'email|required|unique:users',
+            'password' => 'required'
+        ]);
+
+        $user = User::create([
+            'name'  => $validatedData['name'],
+            'email' => $validatedData['email'],
+            'password' => Hash::make($validatedData['password']),
+            'role' => 'user'
+        ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        return response()->json([
+            'access_token' => $token,
+            'user' => UserResource::make($user)
+        ]);
+    }
 
-        return response([
-            'user' => $user,
-            'token' => $token
-        ], 200);
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+        return response()->json([
+            'user' => 'Logout success'
+        ]);
     }
 }

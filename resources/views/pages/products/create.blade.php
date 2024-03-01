@@ -100,7 +100,7 @@
                                 <label>Photo Product</label>
                                 <div class="col-sm-9">
                                     <input type="file" class="form-control" name="image"
-                                        @error('image') is-invalid @enderror>
+                                        @error('image') is-invalid @enderror required>
                                 </div>
                                 @error('image')
                                     <div class="invalid-feedback">
